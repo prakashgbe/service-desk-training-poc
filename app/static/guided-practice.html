@@ -64,6 +64,19 @@
         <button class="primary" id="send-button" type="submit">Send</button>
       </form>
       <div class="status" id="chat-status" role="status" aria-live="polite"></div>
+      <section class="score-panel" id="score-panel" aria-live="polite">
+        <div class="score-head">
+          <div>
+            <div class="score-title">Your practice score</div>
+            <div class="score-meta" id="score-subtitle">Your score will update as you complete troubleshooting steps.</div>
+          </div>
+          <div class="score-value" id="score-value">— / 100</div>
+        </div>
+        <div class="score-track"><div class="score-fill" id="score-fill"></div></div>
+        <div class="score-status" id="incident-outcome">Incident status: In progress</div>
+        <div class="criteria-list" id="criteria-list"></div>
+        <div class="score-note" id="score-note">This is a provisional score until the required checks and final outcome are recorded.</div>
+      </section>
       <div class="start-row">
         <button class="secondary" type="button" id="assessment-button">Review practice assessment</button>
         <button class="secondary" type="button" id="journey-button">View recommended next step</button>
@@ -160,6 +173,7 @@
       startStatus.textContent = "Training session created.";
       chatCard.scrollIntoView({behavior:"smooth", block:"start"});
       chatInput.focus();
+      await refreshScore(false);
     } catch (error) {
       startStatus.textContent = `Unable to start: ${error.message}`;
       startButton.disabled = false;
@@ -184,6 +198,7 @@
       if (!response.ok) throw new Error(data.detail || "The employee response failed.");
       addMessage(data.answer || "The employee returned no answer.", "employee");
       chatStatus.textContent = "";
+      await refreshScore(false);
     } catch (error) {
       chatStatus.textContent = `Unable to get a response: ${error.message}. Your session remains open; you can try again later.`;
     } finally {
@@ -191,6 +206,76 @@
       chatInput.focus();
     }
   });
+
+  const criterionLabels = {
+    checked_wifi_status: "Checked Wi-Fi status",
+    identified_wifi_disabled: "Identified disabled Wi-Fi",
+    enabled_wifi: "Enabled Wi-Fi",
+    verified_wifi_enabled: "Verified Wi-Fi was enabled",
+    checked_airplane_mode: "Checked Airplane Mode",
+    checked_corporate_network: "Checked corporate network visibility",
+    checked_incident_scope: "Checked incident scope",
+    checked_authentication: "Checked authentication errors",
+    checked_ip_configuration: "Checked IP configuration",
+    attempted_reconnection: "Attempted reconnection",
+    verified_connectivity: "Verified connectivity",
+    handled_escalation: "Recorded escalation",
+  };
+
+  async function refreshScore(showDetails = false) {
+    if (!sessionId) return;
+    const scoreValue = document.getElementById("score-value");
+    const scoreFill = document.getElementById("score-fill");
+    const subtitle = document.getElementById("score-subtitle");
+    const outcome = document.getElementById("incident-outcome");
+    const criteriaList = document.getElementById("criteria-list");
+    const note = document.getElementById("score-note");
+    try {
+      const response = await fetch(`/training/sessions/${sessionId}/assessment`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Unable to load assessment.");
+      const assessment = data.assessment || {};
+      const score = Number(assessment.score || 0);
+      const max = Number(assessment.maximum_score || 100);
+      scoreValue.textContent = `${score} / ${max}`;
+      scoreFill.style.width = `${Math.max(0, Math.min(100, (score / (max || 100)) * 100))}%`;
+      subtitle.textContent = assessment.mandatory_criteria_met
+        ? "Required troubleshooting and outcome-handling criteria are met."
+        : "Provisional score · some required steps may still be outstanding.";
+      const status = data.incident_status || {};
+      const statusLabel = assessment.incident_outcome || status.incident_status || "IN_PROGRESS";
+      outcome.textContent = `Incident outcome: ${statusLabel.replaceAll("_", " ").toLowerCase()}`;
+      criteriaList.replaceChildren();
+      Object.entries(assessment.criteria || {}).forEach(([key, passed]) => {
+        const item = document.createElement("div");
+        item.className = `criterion ${passed ? "pass" : "miss"}`;
+        item.textContent = `${passed ? "✓" : "○"} ${criterionLabels[key] || key.replaceAll("_", " ")}`;
+        criteriaList.appendChild(item);
+      });
+      note.textContent = assessment.mandatory_criteria_met
+        ? "Mandatory criteria met. Review the learning recommendation when ready."
+        : "Keep going: complete the missing required checks. A high score alone does not trigger advancement.";
+      if (showDetails) {
+        const target = document.getElementById("assessment-result");
+        target.hidden = false;
+        target.replaceChildren();
+        const heading = document.createElement("strong");
+        heading.textContent = `Assessment: ${score}/${max}`;
+        target.appendChild(heading);
+        const list = document.createElement("ul");
+        list.style.margin = "8px 0 0";
+        list.style.paddingLeft = "20px";
+        (assessment.feedback || []).forEach((line) => {
+          const li = document.createElement("li");
+          li.textContent = line;
+          list.appendChild(li);
+        });
+        target.appendChild(list);
+      }
+    } catch (error) {
+      subtitle.textContent = `Score unavailable: ${error.message}`;
+    }
+  }
 
   async function loadPracticeSummary(endpoint, targetId, label) {
     const target = document.getElementById(targetId);
@@ -200,17 +285,41 @@
       const response = await fetch(`/training/sessions/${sessionId}/${endpoint}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || `Unable to load ${label}.`);
-      target.textContent = JSON.stringify(data.assessment || data.learning_journey || data, null, 2);
+      target.replaceChildren();
+      if (endpoint === "learning-journey") {
+        const journey = data.learning_journey || {};
+        const heading = document.createElement("strong");
+        heading.textContent = journey.recommendation || "Recommendation";
+        target.appendChild(heading);
+        const message = document.createElement("p");
+        message.textContent = journey.message || "No recommendation was returned.";
+        target.appendChild(message);
+        if (journey.next_step) {
+          const next = document.createElement("p");
+          next.textContent = `Next step: ${journey.next_step}`;
+          target.appendChild(next);
+        }
+        if (journey.incident_outcome || data.incident_status?.incident_status) {
+          const status = document.createElement("p");
+          status.textContent = `Incident outcome: ${(journey.incident_outcome || data.incident_status.incident_status).replaceAll("_", " ").toLowerCase()}`;
+          target.appendChild(status);
+        }
+      } else {
+        target.textContent = JSON.stringify(data, null, 2);
+      }
     } catch (error) {
       target.textContent = `${label}: ${error.message}`;
     }
   }
 
   document.getElementById("assessment-button").addEventListener("click", () => {
-    if (sessionId) loadPracticeSummary("assessment", "assessment-result", "practice assessment");
+    if (sessionId) refreshScore(true);
   });
-  document.getElementById("journey-button").addEventListener("click", () => {
-    if (sessionId) loadPracticeSummary("learning-journey", "journey-result", "next learning step");
+  document.getElementById("journey-button").addEventListener("click", async () => {
+    if (sessionId) {
+      await refreshScore(false);
+      await loadPracticeSummary("learning-journey", "journey-result", "next learning step");
+    }
   });
 
 </script>
