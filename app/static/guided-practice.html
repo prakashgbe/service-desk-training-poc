@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guided Practice | Service Desk Academy</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    .practice-wrap{max-width:1000px;margin:0 auto;padding:30px clamp(20px,4vw,58px) 44px}
+    .practice-hero{padding:28px 32px;border-radius:18px;color:#fff;background:linear-gradient(120deg,#182e5e,#315ee7)}
+    .practice-hero .eyebrow{color:#c3d2ff}.practice-hero h1{font-size:clamp(28px,4vw,40px);line-height:1.15;margin:0 0 10px;letter-spacing:-.04em}
+    .practice-hero p{color:#e2eaff;max-width:650px;font-size:14px;margin:0}
+    .practice-card{margin-top:18px;padding:22px;border:1px solid #e2e8f0;border-radius:15px;background:#fff}
+    .practice-card h2{font-size:19px;margin:0 0 9px}.practice-card p{font-size:13px;color:#5c6a80}
+    .start-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+    .primary{border:0;border-radius:9px;padding:11px 16px;background:#315ee7;color:#fff;font-weight:700;cursor:pointer}
+    .primary:disabled{opacity:.55;cursor:wait}.secondary{display:inline-block;padding:10px 14px;border:1px solid #dce4f0;border-radius:9px;color:#3155c5;text-decoration:none;font-size:12px;font-weight:700}
+    .session-id{font-size:11px;color:#75839a}.chat-box{height:300px;overflow:auto;padding:15px;border:1px solid #e2e8f0;border-radius:12px;background:#f8faff}
+    .message{max-width:88%;padding:11px 13px;margin:0 0 10px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
+    .message.coach{background:#fff;border:1px solid #e2e8f0;color:#33445d}.message.learner{margin-left:auto;background:#eaf0ff;color:#203f9d}
+    .chat-form{display:flex;gap:10px;margin-top:12px}.chat-form input{flex:1;min-width:0;padding:12px;border:1px solid #dce3ee;border-radius:10px;font:inherit;font-size:13px}
+    .status{font-size:12px;color:#6b7890;margin-top:9px;min-height:18px}.tip{padding:12px 14px;border-radius:10px;background:#fff8ea;border-left:3px solid #d99a34;font-size:12px;color:#74511b;margin-top:14px}
+    @media(max-width:600px){.practice-wrap{padding:20px 14px}.practice-hero{padding:24px 20px}.chat-form{flex-direction:column}.chat-box{height:260px}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a href="/" style="display:flex;align-items:center;gap:13px;color:inherit;text-decoration:none">
+      <div class="brand-mark">SD</div><div><div class="brand-title">Service Desk Academy</div><div class="brand-subtitle">End-User Computing · Training POC</div></div>
+    </a>
+    <span class="status-pill">POC</span>
+  </header>
+  <main class="practice-wrap">
+    <div class="breadcrumb"><a href="/" style="color:inherit;text-decoration:none">Learning path</a><span>/</span><strong>Guided Practice</strong></div>
+    <section class="practice-hero">
+      <p class="eyebrow">MODULE 01 · COACHED EXERCISE</p>
+      <h1>Practise with an AI Coach</h1>
+      <p>Work through a simulated Wi-Fi-disabled incident. Ask for checks, discuss findings, and use hints to learn the approved troubleshooting approach.</p>
+    </section>
+
+    <section class="practice-card" id="start-card">
+      <h2>Scenario: Employee cannot connect to corporate Wi-Fi</h2>
+      <p><strong>Scenario ID:</strong> WIFI-001 · Wi-Fi Disabled</p>
+      <p>You are the Service Desk engineer. The scenario is simulated: actions and findings do not affect a real laptop or network.</p>
+      <div class="tip"><strong>Coaching reminder:</strong> Gather information, perform approved checks, and never ask for passwords or bypass security controls.</div>
+      <div class="start-row"><button class="primary" id="start-button">Start Guided Practice</button><a class="secondary" href="/">Return to Learn</a></div>
+      <div class="status" id="start-status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="practice-card" id="chat-card" hidden>
+      <h2>Practice conversation</h2>
+      <p>Describe a troubleshooting check or ask the coach for guidance. The coach uses the existing Training Simulation Agent and session tools.</p>
+      <div class="chat-box" id="chat-box" aria-live="polite"></div>
+      <form class="chat-form" id="chat-form">
+        <label for="chat-input" style="position:absolute;left:-9999px">Message to the AI Coach</label>
+        <input id="chat-input" maxlength="2000" placeholder="e.g. Check whether Wi-Fi is enabled" required>
+        <button class="primary" id="send-button" type="submit">Send</button>
+      </form>
+      <div class="status" id="chat-status" role="status" aria-live="polite"></div>
+      <div class="start-row"><a class="secondary" href="/">Return to Learn</a><span class="session-id" id="session-id"></span></div>
+    </section>
+    <footer>Service Desk Academy · Training POC <span>Scenario: WIFI-001</span></footer>
+  </main>
+<script>
+  let sessionId = null;
+  const startButton = document.getElementById("start-button");
+  const startStatus = document.getElementById("start-status");
+  const chatCard = document.getElementById("chat-card");
+  const chatBox = document.getElementById("chat-box");
+  const chatForm = document.getElementById("chat-form");
+  const chatInput = document.getElementById("chat-input");
+  const sendButton = document.getElementById("send-button");
+  const chatStatus = document.getElementById("chat-status");
+
+  function addMessage(text, role) {
+    const el = document.createElement("div");
+    el.className = `message ${role}`;
+    el.textContent = text;
+    chatBox.appendChild(el);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  startButton.addEventListener("click", async () => {
+    startButton.disabled = true;
+    startStatus.textContent = "Creating the simulated training session…";
+    try {
+      const response = await fetch("/training/sessions", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({scenario_id: "WIFI-001"})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Could not create training session.");
+      sessionId = data.session_id;
+      chatCard.hidden = false;
+      document.getElementById("session-id").textContent = `Session: ${sessionId}`;
+      addMessage(`Welcome to Guided Practice. Scenario: ${data.scenario_name}. You are troubleshooting an employee laptop that cannot connect to corporate Wi-Fi. What would you like to check first? You can also ask me for a hint.`, "coach");
+      startStatus.textContent = "Training session created.";
+      chatCard.scrollIntoView({behavior:"smooth", block:"start"});
+      chatInput.focus();
+    } catch (error) {
+      startStatus.textContent = `Unable to start: ${error.message}`;
+      startButton.disabled = false;
+    }
+  });
+
+  chatForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const message = chatInput.value.trim();
+    if (!sessionId || !message) return;
+    addMessage(message, "learner");
+    chatInput.value = "";
+    sendButton.disabled = true;
+    chatStatus.textContent = "Coach is responding…";
+    try {
+      const response = await fetch("/training/chat", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({session_id: sessionId, message})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "The coach request failed.");
+      addMessage(data.answer || "The coach returned no answer.", "coach");
+      chatStatus.textContent = "";
+    } catch (error) {
+      chatStatus.textContent = `Unable to get a response: ${error.message}. Your session remains open; you can try again later.`;
+    } finally {
+      sendButton.disabled = false;
+      chatInput.focus();
+    }
+  });
+</script>
+</body>
+</html>

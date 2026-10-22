@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Service Desk Learning | Corporate Wi-Fi</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark">SD</div>
+    <div>
+      <div class="brand-title">Service Desk Academy</div>
+      <div class="brand-subtitle">End-User Computing · Training POC</div>
+    </div>
+    <span class="status-pill">POC</span>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <p class="eyebrow">LEARNING PATH</p>
+      <nav aria-label="Learning stages">
+        <a class="stage active" href="#learn"><span class="stage-number">1</span><span><strong>Learn</strong><small>Study the procedure</small></span></a>
+        <a class="stage disabled" href="#coming-soon"><span class="stage-number">2</span><span><strong>Guided Practice</strong><small>Coming next</small></span></a>
+        <a class="stage disabled" href="#coming-soon"><span class="stage-number">3</span><span><strong>Simulation</strong><small>Coming next</small></span></a>
+        <a class="stage disabled" href="#coming-soon"><span class="stage-number">4</span><span><strong>Assessment</strong><small>Coming next</small></span></a>
+        <a class="stage disabled" href="#coming-soon"><span class="stage-number">5</span><span><strong>Learning Journey</strong><small>Coming next</small></span></a>
+      </nav>
+      <div class="sidebar-note"><strong>Approved source</strong><p>SOP-NET-001 · Version 1.0</p><span>Approved for POC demonstration</span></div>
+    </aside>
+
+    <section class="content" id="learn">
+      <div class="breadcrumb">Learning path <span>/</span> <strong>Module 1</strong></div>
+      <div class="hero">
+        <div>
+          <p class="eyebrow light">MODULE 01 · END-USER COMPUTING</p>
+          <h1>Corporate Wi-Fi<br>troubleshooting</h1>
+          <p class="hero-copy">Learn the approved initial checks, evidence to capture, and when to escalate a connectivity incident.</p>
+          <div class="hero-meta"><span>📘 4 lessons</span><span>✓ 6 knowledge-check questions</span><span>Source-grounded</span></div>
+        </div>
+        <div class="hero-icon" aria-hidden="true">⌁</div>
+      </div>
+
+      <div class="notice"><strong>Learning note</strong><span>This module reorganizes SOP-NET-001 for learning. Follow your organization's approved procedures; this module does not replace the SOP.</span></div>
+
+      <div class="section-heading"><div><p class="eyebrow">YOUR MODULE</p><h2>Learn the process</h2></div><span class="source-tag">SOP-NET-001</span></div>
+
+      <article class="lesson-card">
+        <div class="lesson-index">01</div><div class="lesson-body">
+          <p class="eyebrow">LESSON 1</p><h3>Gather information first</h3>
+          <p>Before changing any settings, record the employee's reported problem, laptop asset identifier, location, whether one or multiple employees are affected, when the issue started, and any recent password or laptop configuration changes.</p>
+          <div class="callout"><strong>Key principle</strong><p>Gather and record initial information before changing settings.</p></div>
+        </div>
+      </article>
+
+      <article class="lesson-card">
+        <div class="lesson-index">02</div><div class="lesson-body">
+          <p class="eyebrow">LESSON 2</p><h3>Follow the troubleshooting steps</h3>
+          <div class="step-list">
+            <div><span>1</span><section><strong>Check basic connectivity</strong><p>Confirm Airplane Mode is off, Wi-Fi is enabled, and the corporate network name is visible. Record results.</p></section></div>
+            <div><span>2</span><section><strong>Determine the scope</strong><p>Ask whether others in the same location are affected. Record the location and number of users when multiple users are affected.</p></section></div>
+            <div><span>3</span><section><strong>Check authentication</strong><p>Ask about recent password changes and record authentication errors. Never ask for the employee's password or bypass security controls.</p></section></div>
+            <div><span>4</span><section><strong>Check network configuration</strong><p>Inspect IP configuration only if permitted by endpoint troubleshooting policy. Record the IP address and relevant errors.</p></section></div>
+            <div><span>5</span><section><strong>Record findings</strong><p>Document checks, results, error messages, actions taken, and whether connectivity was restored.</p></section></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="lesson-card">
+        <div class="lesson-index">03</div><div class="lesson-body">
+          <p class="eyebrow">LESSON 3</p><h3>Know when to escalate</h3>
+          <p>Escalate when multiple employees appear affected, authentication requires privileged investigation, security or compliance controls may be involved, the issue persists after approved initial checks, or the next action requires permissions you do not have.</p>
+          <div class="callout warning"><strong>Do not assume an outage</strong><p>Do not independently declare a network outage without sufficient evidence. Include troubleshooting evidence in the escalation.</p></div>
+        </div>
+      </article>
+
+      <article class="lesson-card">
+        <div class="lesson-index">04</div><div class="lesson-body">
+          <p class="eyebrow">LESSON 4</p><h3>Verify before resolving</h3>
+          <p>The incident can be considered resolved when the employee confirms the laptop connects to corporate Wi-Fi and the engineer records the verification result. If connectivity cannot be restored, document the evidence and follow the escalation procedure.</p>
+          <div class="callout"><strong>Remember</strong><p>Taking an action is not proof of success. Verify the outcome and record it.</p></div>
+        </div>
+      </article>
+
+      <section class="tutor-panel">
+        <div class="tutor-header"><div class="tutor-avatar">AI</div><div><p class="eyebrow">KNOWLEDGE AGENT · RAG</p><h2>Ask the AI Tutor</h2><p>Ask about the approved troubleshooting procedure.</p></div><span class="tutor-badge">Existing API</span></div>
+        <div class="suggestions" aria-label="Suggested questions">
+          <button type="button" class="suggestion">Why must I check whether multiple employees are affected?</button>
+          <button type="button" class="suggestion">When am I permitted to inspect IP configuration?</button>
+          <button type="button" class="suggestion">What evidence should I include in an escalation?</button>
+        </div>
+        <form id="tutor-form">
+          <label class="sr-only" for="question">Your question</label>
+          <textarea id="question" minlength="3" maxlength="2000" placeholder="Ask a question about the SOP..." required></textarea>
+          <div class="tutor-actions"><span>Answers use your existing Knowledge Agent endpoint.</span><button id="ask-button" type="submit">Ask tutor <span aria-hidden="true">→</span></button></div>
+        </form>
+        <div id="tutor-status" class="tutor-status" role="status" aria-live="polite"></div>
+        <div id="tutor-answer" class="tutor-answer" hidden></div>
+      </section>
+
+      <section class="knowledge-check">
+        <div class="section-heading"><div><p class="eyebrow">RECAP</p><h2>Quick knowledge check</h2></div><span class="source-tag">6 questions</span></div>
+        <p>Check your understanding. These questions are based on SOP-NET-001.</p>
+        <details><summary>1. What should you record before changing settings?</summary><p>The reported problem, laptop asset identifier, employee location, whether one or multiple employees are affected, when the issue started, and recent password or laptop configuration changes.</p></details>
+        <details><summary>2. What if multiple employees are affected?</summary><p>Record the affected location and number of users, then escalate suspected widespread connectivity issues according to the organization's network incident procedure. Do not declare an outage without sufficient evidence.</p></details>
+        <details><summary>3. Can you ask an employee for their password?</summary><p>No. Do not request or record user passwords.</p></details>
+        <details><summary>4. When may you inspect IP configuration?</summary><p>Only if permitted by the organization's endpoint troubleshooting policy.</p></details>
+        <details><summary>5. What should an escalation include?</summary><p>Troubleshooting evidence, including checks performed, results, error messages and actions taken.</p></details>
+        <details><summary>6. What must happen before resolving the incident?</summary><p>The employee confirms that the laptop connects to corporate Wi-Fi, and the engineer records the verification result.</p></details>
+      </section>
+      <footer>Service Desk Academy · Training POC <span>Learning content source: SOP-NET-001 v1.0</span></footer>
+    </section>
+  </main>
+  <script>
+    const questionBox = document.getElementById("question");
+    const form = document.getElementById("tutor-form");
+    const button = document.getElementById("ask-button");
+    const status = document.getElementById("tutor-status");
+    const answer = document.getElementById("tutor-answer");
+
+    document.querySelectorAll(".suggestion").forEach((item) => {
+      item.addEventListener("click", () => {
+        questionBox.value = item.textContent.trim();
+        questionBox.focus();
+      });
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const question = questionBox.value.trim();
+      if (question.length < 3) return;
+      button.disabled = true;
+      status.textContent = "Asking the Knowledge Agent…";
+      answer.hidden = true;
+      answer.textContent = "";
+      try {
+        const response = await fetch("/knowledge/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "The tutor request failed.");
+        }
+        answer.textContent = data.answer || "The Knowledge Agent returned no answer.";
+        answer.hidden = false;
+        status.textContent = "Answer received.";
+      } catch (error) {
+        status.textContent = `Unable to get an answer: ${error.message}. Check that the FastAPI server is running and try again later.`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
