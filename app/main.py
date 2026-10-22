@@ -217,6 +217,7 @@ def get_training_progress(session_id: str):
         "scenario_name": training_session.engine.state.scenario_name,
         "total_actions": len(training_session.get_progress()),
         "actions": training_session.get_progress(),
+        "incident_status": training_session.get_status(),
     }
 
 
@@ -394,6 +395,17 @@ async def get_training_hint(request: TrainingHintRequest):
             detail="Failed to generate a training hint.",
         ) from exc
 
+@app.get("/training/sessions/{session_id}/status")
+def get_training_session_status(session_id: str):
+    training_session = training_sessions.get(session_id)
+    if training_session is None:
+        raise HTTPException(status_code=404, detail="Training session not found.")
+    return {
+        "session_id": session_id,
+        **training_session.get_status(),
+    }
+
+
 @app.get("/training/sessions/{session_id}/assessment")
 def get_training_assessment(session_id: str):
     training_session = training_sessions.get(session_id)
@@ -404,13 +416,16 @@ def get_training_assessment(session_id: str):
             detail="Training session not found."
         )
 
+    status = training_session.get_status()
     assessment = assessment_service.assess(
-        training_session.get_progress()
+        training_session.get_progress(),
+        incident_status=status,
     )
 
     return {
         "session_id": session_id,
         "scenario_id": training_session.engine.state.scenario_id,
+        "incident_status": status,
         "assessment": assessment,
     }
 
@@ -424,8 +439,10 @@ def get_learning_journey(session_id: str):
             detail="Training session not found."
         )
 
+    status = training_session.get_status()
     assessment = assessment_service.assess(
-        training_session.get_progress()
+        training_session.get_progress(),
+        incident_status=status,
     )
 
     recommendation = learning_journey_service.recommend_next_step(
@@ -435,6 +452,7 @@ def get_learning_journey(session_id: str):
     return {
         "session_id": session_id,
         "scenario_id": training_session.engine.state.scenario_id,
+        "incident_status": status,
         "assessment": assessment,
         "learning_journey": recommendation,
     }

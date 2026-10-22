@@ -1,98 +1,138 @@
 class AssessmentService:
-    """
-    Evaluates a learner's Wi-Fi troubleshooting actions.
-    """
+    """Scores the complete Wi-Fi troubleshooting journey using recorded evidence."""
 
+    # Weights total 100. These assess learner actions, not whether the incident
+    # happened to be technically resolvable.
     RUBRIC = {
-        "checked_wifi_status": 20,
-        "identified_wifi_disabled": 20,
-        "enabled_wifi": 30,
-        "verified_wifi_enabled": 30,
+        "checked_wifi_status": 10,
+        "identified_wifi_disabled": 10,
+        "enabled_wifi": 10,
+        "verified_wifi_enabled": 10,
+        "checked_airplane_mode": 5,
+        "checked_corporate_network": 10,
+        "checked_incident_scope": 10,
+        "checked_authentication": 10,
+        "checked_ip_configuration": 5,
+        "attempted_reconnection": 10,
+        "verified_connectivity": 5,
+        "handled_escalation": 5,
     }
 
-    def assess(self, action_history: list[dict]) -> dict:
-        """
-        Evaluate recorded learner actions against the rubric.
-        """
+    @staticmethod
+    def _has_action(action_history: list[dict], action: str) -> bool:
+        return any(
+            record.get("action") == action and record.get("allowed") is True
+            for record in action_history
+        )
 
+    def assess(self, action_history: list[dict], incident_status: dict | None = None) -> dict:
+        history = action_history or []
+        status = incident_status or {}
         score = 0
         feedback = []
 
-        # Criterion 1: Did the learner check Wi-Fi status?
         wifi_checks = [
-            record
-            for record in action_history
-            if record.get("action") == "check_wifi_status"
+            r for r in history
+            if r.get("action") == "check_wifi_status" and r.get("allowed") is True
         ]
+        criteria = {
+            "checked_wifi_status": bool(wifi_checks),
+            "identified_wifi_disabled": any(
+                r.get("action") == "check_wifi_status"
+                and r.get("finding") == "Wi-Fi enabled: False"
+                for r in history
+            ),
+            "enabled_wifi": any(
+                r.get("action") == "enable_wifi" and r.get("allowed") is True
+                for r in history
+            ),
+            "verified_wifi_enabled": any(
+                r.get("action") == "check_wifi_status"
+                and r.get("finding") == "Wi-Fi enabled: True"
+                and any(
+                    prior.get("action") == "enable_wifi"
+                    and prior.get("sequence_number", 0) < r.get("sequence_number", 0)
+                    for prior in history
+                )
+                for r in history
+            ),
+            "checked_airplane_mode": self._has_action(history, "check_airplane_mode"),
+            "checked_corporate_network": self._has_action(history, "check_corporate_network"),
+            "checked_incident_scope": self._has_action(history, "check_incident_scope"),
+            "checked_authentication": self._has_action(history, "check_authentication"),
+            "checked_ip_configuration": self._has_action(history, "check_ip_configuration"),
+            "attempted_reconnection": self._has_action(history, "attempt_reconnect"),
+            "verified_connectivity": self._has_action(history, "verify_connectivity"),
+            "handled_escalation": bool(
+                status.get("escalation_recorded")
+                or any(
+                    r.get("action") == "escalate_incident"
+                    and "Simulated escalation recorded" in str(r.get("finding", ""))
+                    for r in history
+                )
+            ),
+        }
 
-        if wifi_checks:
-            score += self.RUBRIC["checked_wifi_status"]
-            feedback.append("Completed a Wi-Fi status check.")
+        labels = {
+            "checked_wifi_status": "Checked Wi-Fi status.",
+            "identified_wifi_disabled": "Identified that Wi-Fi was initially disabled.",
+            "enabled_wifi": "Performed the Wi-Fi remediation.",
+            "verified_wifi_enabled": "Verified Wi-Fi was enabled after remediation.",
+            "checked_airplane_mode": "Checked Airplane Mode.",
+            "checked_corporate_network": "Checked corporate network visibility.",
+            "checked_incident_scope": "Checked whether other employees were affected.",
+            "checked_authentication": "Checked for authentication errors.",
+            "checked_ip_configuration": "Checked IP configuration.",
+            "attempted_reconnection": "Attempted to reconnect to corporate Wi-Fi.",
+            "verified_connectivity": "Performed an explicit connectivity verification.",
+            "handled_escalation": "Recorded the required simulated escalation.",
+        }
+
+        for criterion, weight in self.RUBRIC.items():
+            if criteria[criterion]:
+                score += weight
+                feedback.append(labels[criterion])
+            else:
+                feedback.append(f"Missing required step: {labels[criterion]}")
+
+        connectivity_restored = bool(status.get("connectivity_restored"))
+        escalation_required = bool(status.get("escalation_required"))
+        escalation_recorded = bool(status.get("escalation_recorded"))
+
+        if connectivity_restored:
+            incident_outcome = "RESOLVED"
+            feedback.append("Connectivity was explicitly verified as restored.")
+        elif escalation_recorded:
+            incident_outcome = "UNRESOLVED_ESCALATED"
+            feedback.append("Incident remains unresolved; simulated escalation was recorded.")
+        elif escalation_required:
+            incident_outcome = "UNRESOLVED_ESCALATION_REQUIRED"
+            feedback.append("Incident remains unresolved and escalation is still required.")
         else:
-            feedback.append("Did not check Wi-Fi status.")
+            incident_outcome = status.get("incident_status", "IN_PROGRESS")
 
-        # Criterion 2: Did the learner identify disabled Wi-Fi?
-        identified_issue = any(
-            record.get("action") == "check_wifi_status"
-            and record.get("finding") == "Wi-Fi enabled: False"
-            for record in action_history
+        # Mandatory gate: the learner cannot advance without an explicit
+        # connectivity verification and either verified resolution or recorded escalation.
+        mandatory_criteria_met = (
+            criteria["checked_wifi_status"]
+            and criteria["checked_airplane_mode"]
+            and criteria["checked_corporate_network"]
+            and criteria["checked_incident_scope"]
+            and criteria["checked_authentication"]
+            and criteria["checked_ip_configuration"]
+            and criteria["attempted_reconnection"]
+            and criteria["verified_connectivity"]
+            and (connectivity_restored or escalation_recorded)
         )
-
-        if identified_issue:
-            score += self.RUBRIC["identified_wifi_disabled"]
-            feedback.append("Identified that Wi-Fi was disabled.")
-        else:
-            feedback.append(
-                "Did not establish evidence that Wi-Fi was disabled."
-            )
-
-        # Criterion 3: Did the learner enable Wi-Fi?
-        enabled_wifi = any(
-            record.get("action") == "enable_wifi"
-            and record.get("allowed") is True
-            and record.get("finding")
-            == "Wi-Fi has been enabled in the simulation."
-            for record in action_history
-        )
-
-        if enabled_wifi:
-            score += self.RUBRIC["enabled_wifi"]
-            feedback.append("Performed the simulated Wi-Fi remediation.")
-        else:
-            feedback.append("Did not complete the simulated remediation.")
-
-        # Criterion 4: Did the learner verify Wi-Fi afterward?
-        verified_wifi = any(
-            record.get("action") == "check_wifi_status"
-            and record.get("finding") == "Wi-Fi enabled: True"
-            and any(
-                previous.get("action") == "enable_wifi"
-                and previous.get("allowed") is True
-                and previous.get("finding")
-                == "Wi-Fi has been enabled in the simulation."
-                and previous.get("sequence_number", 0)
-                < record.get("sequence_number", 0)
-                for previous in action_history
-            )
-            for record in action_history
-        )
-
-        if verified_wifi:
-            score += self.RUBRIC["verified_wifi_enabled"]
-            feedback.append("Verified that Wi-Fi was enabled afterward.")
-        else:
-            feedback.append(
-                "Did not verify Wi-Fi status after remediation."
-            )
 
         return {
             "score": score,
-            "maximum_score": 100,
+            "maximum_score": sum(self.RUBRIC.values()),
             "feedback": feedback,
-            "criteria": {
-                "checked_wifi_status": bool(wifi_checks),
-                "identified_wifi_disabled": identified_issue,
-                "enabled_wifi": enabled_wifi,
-                "verified_wifi_enabled": verified_wifi,
-            },
+            "criteria": criteria,
+            "incident_outcome": incident_outcome,
+            "connectivity_restored": connectivity_restored,
+            "escalation_required": escalation_required,
+            "escalation_recorded": escalation_recorded,
+            "mandatory_criteria_met": mandatory_criteria_met,
         }
