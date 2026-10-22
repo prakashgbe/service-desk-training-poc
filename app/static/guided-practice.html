@@ -17,7 +17,14 @@
     .primary:disabled{opacity:.55;cursor:wait}.secondary{display:inline-block;padding:10px 14px;border:1px solid #dce4f0;border-radius:9px;color:#3155c5;text-decoration:none;font-size:12px;font-weight:700}
     .session-id{font-size:11px;color:#75839a}.chat-box{height:300px;overflow:auto;padding:15px;border:1px solid #e2e8f0;border-radius:12px;background:#f8faff}
     .message{max-width:88%;padding:11px 13px;margin:0 0 10px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
-    .message.coach{background:#fff;border:1px solid #e2e8f0;color:#33445d}.message.learner{margin-left:auto;background:#eaf0ff;color:#203f9d}
+    .message.employee{background:#fff;border:1px solid #e2e8f0;color:#33445d}
+    .message.learner{margin-left:auto;background:#eaf0ff;color:#203f9d}
+    .message.hint{background:#fff8ea;border:1px solid #f0d9a7;color:#74511b;max-width:92%}
+    .message-wrap{display:flex;flex-direction:column;align-items:flex-start;margin-bottom:12px}
+    .message-wrap.learner-wrap{align-items:flex-end}
+    .message-wrap .message{margin-bottom:4px}
+    .hint-button{border:0;background:transparent;color:#76561d;font-size:12px;padding:4px 8px;cursor:pointer;border-radius:7px}
+    .hint-button:hover{background:#fff1d2}.hint-button:disabled{opacity:.6;cursor:wait}
     .chat-form{display:flex;gap:10px;margin-top:12px}.chat-form input{flex:1;min-width:0;padding:12px;border:1px solid #dce3ee;border-radius:10px;font:inherit;font-size:13px}
     .status{font-size:12px;color:#6b7890;margin-top:9px;min-height:18px}.tip{padding:12px 14px;border-radius:10px;background:#fff8ea;border-left:3px solid #d99a34;font-size:12px;color:#74511b;margin-top:14px}
     @media(max-width:600px){.practice-wrap{padding:20px 14px}.practice-hero{padding:24px 20px}.chat-form{flex-direction:column}.chat-box{height:260px}}
@@ -34,8 +41,8 @@
     <div class="breadcrumb"><a href="/" style="color:inherit;text-decoration:none">Learning path</a><span>/</span><strong>Guided Practice</strong></div>
     <section class="practice-hero">
       <p class="eyebrow">MODULE 01 · COACHED EXERCISE</p>
-      <h1>Practise with an AI Coach</h1>
-      <p>Work through a simulated Wi-Fi-disabled incident. Ask for checks, discuss findings, and use hints to learn the approved troubleshooting approach.</p>
+      <h1>Service Desk Role-play</h1>
+      <p>Help an employee who cannot connect to corporate Wi-Fi. Ask questions, investigate, and request a hint whenever you need one.</p>
     </section>
 
     <section class="practice-card" id="start-card">
@@ -49,15 +56,22 @@
 
     <section class="practice-card" id="chat-card" hidden>
       <h2>Practice conversation</h2>
-      <p>Describe a troubleshooting check or ask the coach for guidance. The coach uses the existing Training Simulation Agent and session tools.</p>
+      <p>You are the Service Desk engineer. The employee responds naturally. Use 💡 under an employee message whenever you need a hint.</p>
       <div class="chat-box" id="chat-box" aria-live="polite"></div>
       <form class="chat-form" id="chat-form">
-        <label for="chat-input" style="position:absolute;left:-9999px">Message to the AI Coach</label>
-        <input id="chat-input" maxlength="2000" placeholder="e.g. Check whether Wi-Fi is enabled" required>
+        <label for="chat-input" style="position:absolute;left:-9999px">Message to the simulated employee</label>
+        <input id="chat-input" maxlength="2000" placeholder="Ask the employee a question or suggest a troubleshooting step" required>
         <button class="primary" id="send-button" type="submit">Send</button>
       </form>
       <div class="status" id="chat-status" role="status" aria-live="polite"></div>
-      <div class="start-row"><a class="secondary" href="/">Return to Learn</a><span class="session-id" id="session-id"></span></div>
+      <div class="start-row">
+        <button class="secondary" type="button" id="assessment-button">Review practice assessment</button>
+        <button class="secondary" type="button" id="journey-button">View recommended next step</button>
+        <a class="secondary" href="/">Return to Learn</a>
+        <span class="session-id" id="session-id"></span>
+      </div>
+      <div id="assessment-result" class="tip" hidden aria-live="polite"></div>
+      <div id="journey-result" class="tip" hidden aria-live="polite"></div>
     </section>
     <footer>Service Desk Academy · Training POC <span>Scenario: WIFI-001</span></footer>
   </main>
@@ -73,11 +87,59 @@
   const chatStatus = document.getElementById("chat-status");
 
   function addMessage(text, role) {
+    const wrap = document.createElement("div");
+    wrap.className = `message-wrap ${role === "learner" ? "learner-wrap" : ""}`;
+
     const el = document.createElement("div");
     el.className = `message ${role}`;
     el.textContent = text;
-    chatBox.appendChild(el);
+    wrap.appendChild(el);
+
+    // The learner needs help responding to the employee, so show the hint
+    // directly below every employee message, including the opening message.
+    if (role === "employee") {
+      const hintButton = document.createElement("button");
+      hintButton.type = "button";
+      hintButton.className = "hint-button";
+      hintButton.textContent = "💡 Need a hint?";
+      hintButton.setAttribute("aria-label", "Get a hint for responding to the employee");
+      hintButton.addEventListener("click", () => requestHint(text, hintButton));
+      wrap.appendChild(hintButton);
+    }
+
+    chatBox.appendChild(wrap);
     chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  async function requestHint(employeeMessage, button) {
+    if (!sessionId || button.disabled) return;
+    button.disabled = true;
+    button.textContent = "💡 Getting hint…";
+    chatStatus.textContent = "The AI coach is preparing a hint…";
+    try {
+      const conversation = Array.from(chatBox.querySelectorAll(".message"))
+        .filter((el) => !el.classList.contains("hint"))
+        .map((el) => ({
+          role: el.classList.contains("employee") ? "employee" : "learner",
+          text: el.textContent
+        }));
+      const response = await fetch("/training/hint", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({session_id: sessionId, employee_message: employeeMessage, conversation})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "The hint request failed.");
+      addMessage(`💡 Hint: ${data.hint || data.answer || "No hint was returned."}`, "hint");
+      chatStatus.textContent = "";
+      button.textContent = "💡 Hint shown";
+    } catch (error) {
+      chatStatus.textContent = `Unable to get a hint: ${error.message}`;
+      button.disabled = false;
+      button.textContent = "💡 Need a hint?";
+    } finally {
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
   }
 
   startButton.addEventListener("click", async () => {
@@ -94,7 +156,7 @@
       sessionId = data.session_id;
       chatCard.hidden = false;
       document.getElementById("session-id").textContent = `Session: ${sessionId}`;
-      addMessage(`Welcome to Guided Practice. Scenario: ${data.scenario_name}. You are troubleshooting an employee laptop that cannot connect to corporate Wi-Fi. What would you like to check first? You can also ask me for a hint.`, "coach");
+      addMessage(`Hi, I'm unable to connect to the corporate Wi-Fi. Can you help me?`, "employee");
       startStatus.textContent = "Training session created.";
       chatCard.scrollIntoView({behavior:"smooth", block:"start"});
       chatInput.focus();
@@ -111,7 +173,7 @@
     addMessage(message, "learner");
     chatInput.value = "";
     sendButton.disabled = true;
-    chatStatus.textContent = "Coach is responding…";
+    chatStatus.textContent = "The employee is replying…";
     try {
       const response = await fetch("/training/chat", {
         method: "POST",
@@ -119,8 +181,8 @@
         body: JSON.stringify({session_id: sessionId, message})
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "The coach request failed.");
-      addMessage(data.answer || "The coach returned no answer.", "coach");
+      if (!response.ok) throw new Error(data.detail || "The employee response failed.");
+      addMessage(data.answer || "The employee returned no answer.", "employee");
       chatStatus.textContent = "";
     } catch (error) {
       chatStatus.textContent = `Unable to get a response: ${error.message}. Your session remains open; you can try again later.`;
@@ -129,6 +191,28 @@
       chatInput.focus();
     }
   });
+
+  async function loadPracticeSummary(endpoint, targetId, label) {
+    const target = document.getElementById(targetId);
+    target.hidden = false;
+    target.textContent = `Loading ${label}…`;
+    try {
+      const response = await fetch(`/training/sessions/${sessionId}/${endpoint}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || `Unable to load ${label}.`);
+      target.textContent = JSON.stringify(data.assessment || data.learning_journey || data, null, 2);
+    } catch (error) {
+      target.textContent = `${label}: ${error.message}`;
+    }
+  }
+
+  document.getElementById("assessment-button").addEventListener("click", () => {
+    if (sessionId) loadPracticeSummary("assessment", "assessment-result", "practice assessment");
+  });
+  document.getElementById("journey-button").addEventListener("click", () => {
+    if (sessionId) loadPracticeSummary("learning-journey", "journey-result", "next learning step");
+  });
+
 </script>
 </body>
 </html>

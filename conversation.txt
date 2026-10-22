@@ -1,0 +1,31 @@
+Hi, I'm unable to connect to the corporate Wi-Fi. Can you help me?
+💡 Need a hint?
+check if wifi is enabled
+My Wi-Fi is currently disabled.
+💡 Need a hint?
+pls enable it
+I've turned Wi-Fi on.
+💡 Need a hint?
+Please check if the corporate Wi-Fi network is visible now.
+I can see the corporate network, but I'm still not connected.
+💡 Need a hint?
+Are you getting any error message when you try to connect to the corporate Wi-Fi?
+I don't see any authentication error messages. It just won't connect when I try.
+💡 Need a hint?
+Have you changed your corporate password recently?
+No, I haven't changed my password recently.
+💡 Need a hint?
+Are you the only person experiencing this issue, or are other employees in your location also unable to connect to the corporate Wi-Fi?
+It looks like it's just me. The people sitting near me are connected fine.
+💡 Need a hint?
+Could you please check whether Airplane Mode is turned off and Wi-Fi is enabled on your laptop?
+Airplane mode is off, and Wi-Fi is enabled.
+💡 Need a hint?
+Could you please check your laptop's network configuration and tell me whether you're seeing any IP address or network configuration errors? Please don't change any settings yet.
+My IP configuration looks valid, no errors there. But I'm still not connected to the corporate Wi-Fi.
+💡 Need a hint?
+Thanks for checking. Could you try disconnecting from the corporate Wi-Fi if it shows as connected, then reconnecting? Please let me know what happens. Don't forget the network or change any security settings.
+I gave that a try, but I'm still not connected to the corporate Wi-Fi.
+💡 Need a hint?
+Thanks for trying that. Since you're still unable to connect, I'll document the checks we've completed and escalate this to the network support team for further investigation. I'll include the details of the issue and the results of our troubleshooting.
+Sounds good, thanks for your help with this. Let me know when you hear back from them.

@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from google.adk.runners import Runner
+from google.adk.agents import Agent
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
@@ -89,6 +90,17 @@ class TrainingChatRequest(BaseModel):
         description="The learner's natural-language message",
     )
 
+
+class HintConversationMessage(BaseModel):
+    role: str = Field(pattern="^(employee|learner)$")
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class TrainingHintRequest(BaseModel):
+    session_id: str
+    employee_message: str = Field(min_length=1, max_length=2000)
+    conversation: list[HintConversationMessage] = Field(default_factory=list, max_length=40)
+
 session_service = InMemorySessionService()
 
 runner = Runner(
@@ -107,6 +119,31 @@ training_agent_runner = Runner(
     agent=training_simulation_agent,
     app_name="training_simulation",
     session_service=training_agent_session_service,
+)
+
+# The hint role is separate from the employee conversation. It has no tools,
+# so requesting a hint cannot execute a troubleshooting action.
+hint_agent = Agent(
+    name="training_hint_agent",
+    model="gemini-3.5-flash-lite",
+    description="Provides optional, contextual hints to a Service Desk training learner.",
+    instruction="""
+You are the optional Hint Coach in a Service Desk training simulation.
+The learner is acting as a Service Desk engineer. The employee is the person
+reporting the issue. Give one concise, contextual hint to help the learner decide
+what to ask or do next. Do not answer as the employee. Do not execute actions.
+Do not reveal the complete solution or list every troubleshooting step. Base hints
+on the current employee message and conversation. Follow safe enterprise practice:
+never ask for passwords, bypass security controls, or suggest unauthorized changes.
+If relevant, encourage the learner to follow the approved SOP and verify results.
+Return only the hint text, without a heading or markdown list.
+""",
+)
+hint_session_service = InMemorySessionService()
+hint_runner = Runner(
+    agent=hint_agent,
+    app_name="service_desk_training_hints",
+    session_service=hint_session_service,
 )
 
 # In-memory registry for active training sessions.
@@ -306,6 +343,56 @@ async def training_chat(request: TrainingChatRequest):
             status_code=500,
             detail="Failed to process the training conversation."
         )
+
+
+@app.post("/training/hint")
+async def get_training_hint(request: TrainingHintRequest):
+    """Return an optional hint without modifying the simulated scenario."""
+    if request.session_id not in training_sessions:
+        raise HTTPException(status_code=404, detail="Training session not found.")
+
+    hint_session_id = str(uuid4())
+    hint_user_id = request.session_id
+    conversation_text = "\n".join(
+        f"{item.role.title()}: {item.text}" for item in request.conversation[-20:]
+    )
+    prompt = (
+        "Provide one contextual hint for the learner.\n\n"
+        f"Current employee message: {request.employee_message}\n\n"
+        f"Recent conversation:\n{conversation_text or '(No prior conversation)'}\n\n"
+        "Give one concise nudge toward the next appropriate question or approved check, not the full answer. Never speak as the employee, never claim a check has been performed, and never execute a tool."
+    )
+
+    try:
+        await hint_session_service.create_session(
+            app_name="service_desk_training_hints",
+            user_id=hint_user_id,
+            session_id=hint_session_id,
+        )
+        message = types.Content(role="user", parts=[types.Part(text=prompt)])
+        hint_text = ""
+        async for event in hint_runner.run_async(
+            user_id=hint_user_id,
+            session_id=hint_session_id,
+            new_message=message,
+        ):
+            if event.is_final_response() and event.content:
+                for part in event.content.parts:
+                    if part.text:
+                        hint_text += part.text
+
+        if not hint_text.strip():
+            raise HTTPException(status_code=502, detail="The Hint Coach returned no hint.")
+        return {"session_id": request.session_id, "hint": hint_text.strip()}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate a training hint.",
+        ) from exc
 
 @app.get("/training/sessions/{session_id}/assessment")
 def get_training_assessment(session_id: str):
